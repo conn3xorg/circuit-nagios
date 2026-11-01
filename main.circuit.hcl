@@ -91,6 +91,8 @@ locals {
   }
   layout = { for name, k in local.kind : name => local.layouts[k] }
 
+  password_dir = "/etc/conn3x/nagios"
+
   listen = strcontains(var.web_listen_address, ":") ? "[${var.web_listen_address}]:${var.web_port}" : "${var.web_listen_address}:${var.web_port}"
 
   web_auth = <<-EOT
@@ -455,12 +457,19 @@ circuit "nagios" {
     }
   }
 
+  step "password_dir" {
+    directory {
+      path = local.password_dir
+      mode = "0700"
+    }
+  }
+
   # The web server hashes this into the htpasswd file below. It stays on the
   # host so a changed password shows up in the next plan, and only root can
-  # read it.
+  # read it, so it sits outside the directories Nagios's own user owns.
   step "password_file" {
     file {
-      path       = "${local.layout[each.key].etc}/conn3x-web-password"
+      path       = "${local.password_dir}/web-password"
       content_wo = var.web_password
       owner      = "root"
       group      = "root"
@@ -468,11 +477,19 @@ circuit "nagios" {
     }
   }
 
+  # Up to v0.1.0 the password sat in Nagios's config directory.
+  step "old_password_file" {
+    command {
+      command = "rm -f -- ${local.layout[each.key].etc}/conn3x-web-password"
+      unless  = "[ ! -e ${local.layout[each.key].etc}/conn3x-web-password ]"
+    }
+  }
+
   step "htpasswd" {
     command {
       command  = <<-EOT
         set -e
-        htpasswd -ciB ${local.layout[each.key].etc}/htpasswd.users nagiosadmin < ${local.layout[each.key].etc}/conn3x-web-password
+        htpasswd -ciB ${local.layout[each.key].etc}/htpasswd.users nagiosadmin < ${local.password_dir}/web-password
         chown root:${local.layout[each.key].web_user} ${local.layout[each.key].etc}/htpasswd.users
         chmod 0640 ${local.layout[each.key].etc}/htpasswd.users
       EOT
