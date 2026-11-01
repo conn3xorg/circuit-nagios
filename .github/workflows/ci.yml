@@ -79,6 +79,8 @@ jobs:
       - name: Check the password stayed out of state
         working-directory: examples/local
         run: "! grep -q example-password terraform.tfstate"
+      - name: Check only root can read the password file
+        run: sudo podman exec circuit-nagios stat -c '%U %a' /etc/conn3x/nagios /etc/conn3x/nagios/web-password | sed 's/^/ /' | grep -c '^ root [67]00$' | grep -qx 2
       - name: Check a passing check shows OK and a failing one CRITICAL
         run: |
           sudo podman cp test/check-status.sh circuit-nagios:/tmp/check-status.sh
