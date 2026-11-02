@@ -23,7 +23,7 @@ The catch: a built Nagios gets no updates from your package manager. Security fi
 
 ```hcl
 module "nagios" {
-  source = "github.com/conn3xorg/circuit-nagios?ref=v0.1.1"
+  source = "github.com/conn3xorg/circuit-nagios?ref=v0.1.2"
 
   hosts                = { monitor = "203.0.113.10" }
   ssh_private_key_file = "~/.ssh/id_ed25519"

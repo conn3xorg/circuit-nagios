@@ -489,9 +489,12 @@ circuit "nagios" {
     command {
       command  = <<-EOT
         set -e
-        htpasswd -ciB ${local.layout[each.key].etc}/htpasswd.users nagiosadmin < ${local.password_dir}/web-password
-        chown root:${local.layout[each.key].web_user} ${local.layout[each.key].etc}/htpasswd.users
-        chmod 0640 ${local.layout[each.key].etc}/htpasswd.users
+        # Built from source, the config directory is nagios's, so the file is
+        # made elsewhere and installed over whatever is at that path.
+        w=$(mktemp -d)
+        trap 'rm -rf "$w"' EXIT
+        htpasswd -ciB "$w/users" nagiosadmin < ${local.password_dir}/web-password
+        install -o root -g ${local.layout[each.key].web_user} -m 0640 "$w/users" ${local.layout[each.key].etc}/htpasswd.users
       EOT
       triggers = conn3x_file.nagios__password_file[each.key].revision
     }
