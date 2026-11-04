@@ -397,12 +397,26 @@ circuit "nagios" {
     become           = var.ssh_become
   }
 
+  # Tests the new objects with the rest of the config before they replace
+  # the old ones, through a copy of nagios.cfg that names the new file where
+  # the real one names conn3x.cfg, or on the first apply localhost.cfg.
   step "objects" {
     depends_on = [conn3x_command.debian__package_web_config, conn3x_package.fedora__packages, conn3x_command.build__install, conn3x_command.el_selinux__labels]
     file {
       path    = "${local.layout[each.key].etc}/conn3x.cfg"
       content = local.objects
       mode    = "0644"
+      validate = join("; ", [
+        "set -e",
+        "c=%s",
+        "m=$(mktemp ${local.layout[each.key].etc}/.conn3x-test.XXXXXX)",
+        "trap 'rm -f \"$m\"' EXIT",
+        # The packaged nagios -v fails on a copy only root can read.
+        "chmod 0644 \"$m\"",
+        "sed -E \"s#^cfg_file=.*/(localhost|conn3x)\\.cfg\\$#cfg_file=$c#\" ${local.layout[each.key].etc}/nagios.cfg > \"$m\"",
+        "grep -qxF \"cfg_file=$c\" \"$m\" || { echo 'nagios.cfg has no cfg_file line for localhost.cfg or conn3x.cfg to test the new objects in.' >&2; exit 1; }",
+        "${local.layout[each.key].bin} -v \"$m\"",
+      ])
     }
   }
 

@@ -96,7 +96,7 @@ On each host, in order:
 
 1. Installs Nagios and the plugins, or on Ubuntu and the Red Hat family, the build tools and plugins, then downloads the source, checks its SHA-256, and builds and installs it under `/usr/local/nagios` with upstream's own make targets. On Rocky Linux and AlmaLinux that starts with `epel-release`. RHEL doesn't ship it, so turn EPEL on yourself there first.
 2. On a built host with SELinux on, labels `/usr/local/nagios` so the web server can run the CGIs, read the config and write the command pipe.
-3. Writes your objects to `conn3x.cfg` in Nagios's config directory, and points `nagios.cfg` at it in place of the sample `localhost.cfg`. The other sample definitions, such as `linux-server` and `generic-service`, stay, since your hosts and services use them.
+3. Writes your objects to `conn3x.cfg` in Nagios's config directory, and points `nagios.cfg` at it in place of the sample `localhost.cfg`. The other sample definitions, such as `linux-server` and `generic-service`, stay, since your hosts and services use them. New objects are tested with `nagios -v` alongside the rest of the config before they replace the old ones, so a bad object, such as a service whose `check_command` nobody defined, fails the apply and never replaces the last good `conn3x.cfg`. A restart or a reboot still reads that.
 4. Runs `nagios -v` whenever any of that changes. Then starts Nagios now and at boot, and reloads it.
 5. Turns on the login in `cgi.cfg`, which Debian's package leaves off, and hashes your password with bcrypt into `htpasswd.users`. On Debian it also turns off the package's web config, which lets in every private address.
 6. Writes the web server's config, requiring a login for the pages and the CGIs alike. Then sets its `Listen` line to `web_listen_address` and `web_port`, and starts it now and at boot.
@@ -144,7 +144,7 @@ Before the circuit runs, the `conn3x_host` data source reads each host's distrib
 
 ## Requirements
 
-Requires Conn3x v0.6.10 or later and systemd on each host, with a package mirror the host can reach. Built hosts also need outbound HTTPS to github.com.
+Requires Conn3x v0.7.0 or later and systemd on each host, with a package mirror the host can reach. Built hosts also need outbound HTTPS to github.com.
 
 ## Tested on
 
