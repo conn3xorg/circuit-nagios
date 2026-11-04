@@ -86,7 +86,7 @@ jobs:
           sudo podman cp test/check-status.sh circuit-nagios:/tmp/check-status.sh
           sudo podman exec circuit-nagios sh /tmp/check-status.sh ${{ matrix.web_path }} example-password-change-me
       # The bad service names a command that doesn't exist.
-      - name: Check a bad config fails the apply, twice, and Nagios keeps running
+      - name: Check a bad config fails the apply, twice, never reaches conn3x.cfg, and Nagios keeps running, through a restart
         working-directory: examples/local
         run: |
           bad='define service {
@@ -97,6 +97,8 @@ jobs:
           }'
           conn3x apply -auto-approve -var "extra_objects=$bad" && exit 1
           conn3x apply -auto-approve -var "extra_objects=$bad" && exit 1
+          sudo podman exec circuit-nagios sh -c '! grep -qs no_such_command /etc/nagios4/conn3x.cfg /etc/nagios/conn3x.cfg /usr/local/nagios/etc/conn3x.cfg'
+          sudo podman exec circuit-nagios sh -c 'systemctl restart nagios || systemctl restart nagios4'
           sudo podman exec circuit-nagios sh -c 'systemctl is-active nagios || systemctl is-active nagios4'
           conn3x apply -auto-approve
           conn3x plan -detailed-exitcode
